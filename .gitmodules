@@ -1,0 +1,3 @@
+[submodule "py-libspheroid"]
+	path = py-libspheroid
+	url = https://github.com/DrShmirko/py-libspheroid.git
