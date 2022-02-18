@@ -3,24 +3,48 @@
 import click
 
 from scattlib.config import CONFIG_FILES
-from scattlib.scattmatrices import MuellerMatrixAeronet
+from scattlib.scattmatrices import MuellerMatrixAeronet,\
+                                    MuellerMatrixCombiner
 
 
-@click.command()
+@click.group()
+def cli():
+    pass
+
+@cli.command()
 @click.option('--nlines','-n', default=5, type=int, 
                 help='Столько данных читает из файла')
 @click.option('--spheres/--spheroids', default=False, 
                 help='Использовать сферрические ядра')
 @click.option('--sphericity', type=click.FloatRange(1.0, 99.0),
-                default=1.0, help='Доля сферического аэрозоля')
-@click.argument('files', nargs=-1, type=click.Path(exists=True), 
+                default=40.0, help='Доля сферического аэрозоля')
+@click.option('--skiprows','-s', default=0, type=int,
+                help='Количество пропускаемых строк')
+@click.argument('filename', nargs=1, type=click.Path(exists=True), 
                 required=True)
-def do_process(nlines, spheres, sphericity, files):
+def do_process(nlines, spheres, sphericity, skiprows, filename):
+    filename = (filename,)
     mc = MuellerMatrixAeronet(spheres)
-    mc.run(files, sphericity)
+    mc.run(filename, sphericity, skiprows)
     mc.finalize()
     return
-    
+
+
+@cli.command()
+@click.option('--skiprows','-s', default=0, type=int,
+                help='Количество пропускаемых строк')
+@click.option('--dirname', nargs=1, 
+                type=click.Path(exists=True, 
+                    dir_okay=True, file_okay=False), 
+                required=True)
+@click.option('--sphericity', type=click.FloatRange(1.0, 99.0),
+                default=40.0, help='Доля сферического аэрозоля')
+@click.argument('filename', nargs=1, type=click.Path(exists=True), 
+                required=True)
+def do_combine(skiprows, dirname, sphericity, filename):
+    cb = MuellerMatrixCombiner(skiprows)
+    cb.run(dirname, sphericity, filename)
+    pass
     
 if __name__ == '__main__':
-    do_process()
+    cli()
