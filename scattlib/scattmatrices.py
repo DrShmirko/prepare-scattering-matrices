@@ -13,7 +13,7 @@ class MuellerMatrixAeronet(object):
         self.spc.wvl=wvl
         self.isSpheres=spheres
         
-    def run(self, files, sphericity = 99.0, skiprows=0):
+    def run(self, files, sphericity, skiprows):
         for i, fname in tenumerate(files):
             print(f'Processing file {fname}...')
             self._run0(fname, sphericity, skiprows)
@@ -74,3 +74,59 @@ class MuellerMatrixAeronet(object):
     def finalize(self):
         print('Free internal memory used by dynamic library.')
         self.spc.finalize()
+        
+
+
+class MuellerMatrixCombiner(object):
+    def __init__(self, skiprows):
+        """
+        """
+        self.skiprows = skiprows
+        pass
+        
+    def run(self, dirname, sphericity, filename):
+        """
+        """
+        ant_tbl = pd.read_csv(filename, skiprows=self.skiprows)
+        all_ok = True
+        
+        for col_i in WAVELEN_COLUMNS:
+            all_ok = all_ok and (col_i in ant_tbl.columns)
+        if not all_ok:
+            return
+            
+        for i, r in tenumerate(ant_tbl.iterrows()):
+            # Достаем 
+            sp = r[1][52] # Sphericity
+            
+            # Пропуск итерации, если сферичность выше необходимой
+            if sp>sphericity:
+                continue
+            
+            fname_spheres = f"out/{PREFIXES[True]}_{i}.out"
+            fname_spheroids = f"out/{PREFIXES[False]}_{i}.out"
+            res_spheres = self._readFile(fname_spheres)
+            res_spheroids = self._readFile(fname_spheroids)
+            sp = sp / 100.0
+            sca = res_spheres[0]*sp+(1.0-sp)*res_spheroids[0]
+            ext = res_spheres[1]*sp+(1.0-sp)*res_spheroids[1]
+            absb = ext-sca
+            volc = res_spheres[3]*sp+(1.0-sp)*res_spheroids[3]
+            data = res_spheres[4]*sp+(1.0-sp)*res_spheroids[4]
+            foutname = f"out/total_{i}.out"
+            self._saveToFile(foutname, sca, ext, absb, data)
+    
+    def _readFile(self, fname):
+        with open(fname, "rt") as fin:
+            sca, ext, absb, volc = map(float,fin.readline().split())
+            fin.readline()
+            data = np.loadtxt(fin)
+        return sca, ext, absb, volc, data
+        
+    def _saveToFile(self, fname, sca, ext, absb, data):
+        with open(fname, "wt") as fout:
+            print(f"{sca:.4f} {ext:.4f} {absb:.4f}", file=fout)
+            print(f"theta s11 s12 s13 s14 s21 s22 s23 s24 s31 s32 s33 s34 s41 s42 s43 s44", file=fout)
+            np.savetxt(fout, data, fmt='%.4e')
+        
+        

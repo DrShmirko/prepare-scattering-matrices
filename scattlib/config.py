@@ -7,8 +7,8 @@ CONFIG_FILES={
 }
 
 PREFIXES={
-    True: 'sphrs_',
-    False: 'sphrds_'
+    True: 'sphrs',
+    False: 'sphrd'
 }
 
 WAVELEN_COLUMNS = [
