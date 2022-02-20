@@ -73,6 +73,7 @@ class MuellerMatrixAeronet(object):
         
     def finalize(self):
         print('Free internal memory used by dynamic library.')
+        self.spc.ndp=0
         self.spc.finalize()
         
 
