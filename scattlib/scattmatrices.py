@@ -4,6 +4,7 @@ from tqdm.contrib import tenumerate
 import pandas as pd
 from .config import WAVELEN_COLUMNS, WVL, CONFIG_FILES, PREFIXES
 import numpy as np
+import os
 
 class MuellerMatrixAeronet(object):
     
@@ -14,12 +15,16 @@ class MuellerMatrixAeronet(object):
         self.isSpheres=spheres
         
     def run(self, files, sphericity, skiprows):
+        
         for i, fname in tenumerate(files):
             print(f'Processing file {fname}...')
             self._run0(fname, sphericity, skiprows)
         pass
         
     def _run0(self, file0, sphericity, skiprows):
+        bname = os.path.basename(file0)
+        if not os.path.exists(f"out/{bname}"):
+            os.mkdir(f"out/{bname}")
         ant_tbl = pd.read_csv(file0, skiprows=skiprows)
         all_ok = True
         
@@ -54,7 +59,7 @@ class MuellerMatrixAeronet(object):
             self.spc.midx = complex(re0, im0)
             self.spc.sd = dvdlnr
             self.spc.calc()
-            foutname = f"out/{PREFIXES[self.isSpheres]}_{i}.out"
+            foutname = f"out/{bname}/{PREFIXES[self.isSpheres]}_{i}.out"
             self._saveToFile(foutname)
             
     def _saveToFile(self, foutname):
@@ -88,6 +93,9 @@ class MuellerMatrixCombiner(object):
     def run(self, dirname, sphericity, filename):
         """
         """
+        bname = os.path.basename(filename)
+        if not os.path.exists(f"out/{bname}"):
+            raise Exception(f"Path out/{bname} didn'''t exist")
         ant_tbl = pd.read_csv(filename, skiprows=self.skiprows)
         all_ok = True
         
@@ -104,8 +112,8 @@ class MuellerMatrixCombiner(object):
             if sp>sphericity:
                 continue
             
-            fname_spheres = f"out/{PREFIXES[True]}_{i}.out"
-            fname_spheroids = f"out/{PREFIXES[False]}_{i}.out"
+            fname_spheres = f"out/{bname}/{PREFIXES[True]}_{i}.out"
+            fname_spheroids = f"out/{bname}/{PREFIXES[False]}_{i}.out"
             res_spheres = self._readFile(fname_spheres)
             res_spheroids = self._readFile(fname_spheroids)
             sp = sp / 100.0
@@ -114,7 +122,7 @@ class MuellerMatrixCombiner(object):
             absb = ext-sca
             volc = res_spheres[3]*sp+(1.0-sp)*res_spheroids[3]
             data = res_spheres[4]*sp+(1.0-sp)*res_spheroids[4]
-            foutname = f"out/total_{i}.out"
+            foutname = f"out/{bname}/total_{i}.out"
             self._saveToFile(foutname, sca, ext, absb, data)
     
     def _readFile(self, fname):
